@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestión de Datos (Excel)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="fondo.css">
+</head>
+<body class="from-slate-900 to-slate-700 min-h-screen flex items-center justify-center">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-lg">
+        <h2 class="text-2xl font-bold text-center mb-4">Gestión de Datos (Excel)</h2>
+
+        <div class="mb-4">
+            <label class="font-semibold">Cargar archivo Excel:</label>
+            <input type="file" id="inputExcel" class="mt-2 block w-full border rounded p-2">
+        </div>
+
+        <div class="mb-4">
+            <input id="nombre" type="text" placeholder="Nombre" class="w-full p-2 mb-2 border rounded">
+            <input id="edad" type="number" placeholder="Edad" class="w-full p-2 border rounded">
+        </div>
+
+        <div class="flex gap-4 mb-4">
+            <button onclick="agregarRegistro()" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Guardar</button>
+            <button onclick="exportarExcel()" class="bg-green-500 text-white px-4 py-2 rounded w-full">Exportar Excel</button>
+        </div>
+
+        <div class="mt-6">
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border p-2">ID</th>
+                        <th class="border p-2">Nombre</th>
+                        <th class="border p-2">Edad</th>
+                        <th class="border p-2">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaDatos"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let id = 1;
+
+        document.getElementById('inputExcel').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                jsonData.forEach(row => {
+                    agregarFila(row.ID, row.Nombre, row.Edad);
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function agregarRegistro() {
+            const nombre = document.getElementById('nombre').value;
+            const edad = document.getElementById('edad').value;
+
+            if (!nombre || !edad) {
+                alert("Por favor completa ambos campos");
+                return;
+            }
+
+            agregarFila(id, nombre, edad);
+            id++;
+
+            document.getElementById('nombre').value = '';
+            document.getElementById('edad').value = '';
+        }
+
+        function agregarFila(newId, nombre, edad) {
+            const tabla = document.getElementById('tablaDatos');
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td class="border p-2 text-center">${newId}</td>
+                <td class="border p-2 text-center">${nombre}</td>
+                <td class="border p-2 text-center">${edad}</td>
+                <td class="border p-2 text-center">
+                    <button onclick="editar(this)" class="bg-yellow-400 px-2 py-1 rounded mr-2">Editar</button>
+                    <button onclick="eliminar(this)" class="bg-red-500 text-white px-2 py-1 rounded">Eliminar</button>
+                </td>
+            `;
+            tabla.appendChild(fila);
+        }
+
+        function eliminar(boton) {
+            boton.parentElement.parentElement.remove();
+        }
+
+        function editar(boton) {
+            const fila = boton.parentElement.parentElement;
+            const celdas = fila.querySelectorAll('td');
+
+            const nuevoNombre = prompt("Nuevo nombre:", celdas[1].innerText);
+            const nuevaEdad = prompt("Nueva edad:", celdas[2].innerText);
+
+            if (nuevoNombre !== null && nuevaEdad !== null) {
+                celdas[1].innerText = nuevoNombre;
+                celdas[2].innerText = nuevaEdad;
+            }
+        }
+
+        function exportarExcel() {
+            let wb = XLSX.utils.book_new();
+            let ws_data = [["ID", "Nombre", "Edad"]];
+
+            document.querySelectorAll("#tablaDatos tr").forEach(tr => {
+                const row = [
+                    tr.children[0].innerText,
+                    tr.children[1].innerText,
+                    tr.children[2].innerText
+                ];
+                ws_data.push(row);
+            });
+
+            let ws = XLSX.utils.aoa_to_sheet(ws_data);
+            XLSX.utils.book_append_sheet(wb, ws, "Datos");
+            XLSX.writeFile(wb, "datos_exportados.xlsx");
+        }
+    </script>
+
+</body>
+</html>
